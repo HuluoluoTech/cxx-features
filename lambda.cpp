@@ -1,5 +1,46 @@
 #include <iostream>
 #include <functional>
+#include <type_traits>
+
+template<typename Callable>
+void CallWith(Callable&& fn)
+{
+    // std::is_nothrow_invocable_v to check if the given callable object is marked with noexcept
+    if constexpr(std::is_nothrow_invocable_v<Callable, int>)
+    {
+        std::cout << "with noexcept." << "\n";
+        fn(10);
+    }
+    else
+    {
+        std::cout << "Calling normally." << "\n";
+        fn(10);
+    }
+}
+
+template < class... Ts> struct overloaded : Ts... { using Ts:: operator ()...; };
+template < class... Ts> overloaded(Ts...) -> overloaded< Ts...> ;
+
+/**
+ * Lambda in C++17
+ * - constexpr lambda
+ *   capture of *this
+ */
+void _In_Cxx17()
+{
+    // check if a callable object is marked with noexcept
+    int x{10};
+    const auto lam = [&x](int y) noexcept { x+=y; };
+    CallWith(lam);
+
+    // overload
+    const auto overs = overloaded 
+    {
+        [](const int& i) { std::cout << "int: " << i << "\n"; },
+        [](const float& f) { std::cout << "float: " << f << "\n"; }
+    };
+    overs(3);
+}
 
 /**
  *
@@ -33,10 +74,27 @@ void _In_Cxx14()
     x = 0;
     y = 0;
     bar();
+
+    // recursive lambda
+    const auto factorial = [](int n) noexcept 
+    {
+        const auto f_impl = [](int n, const auto& impl) noexcept -> int 
+        {
+            return n > 1 ? n * impl(n - 1, impl) : 1;
+        };  
+
+        return f_impl(n, f_impl);
+    };
+    auto factorial_res = factorial(5);
+    std::cout << "factorial_res : " << factorial_res << std::endl;
 }
 
 int main()
 {
+    _In_Cxx17();
+
+    return 0;
+
     _In_Cxx14();
 
     return 0;
